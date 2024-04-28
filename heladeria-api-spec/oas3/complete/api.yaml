@@ -2,9 +2,9 @@ openapi: 3.0.0
 info:
   description: |
     API de la Heladería Via Apilia. A través de esta API se pueden consultar
-    los gustos de helado y realizar pedidos.
-  version: "1.0.0"
-  title: Heladería Via Apilia
+    los gustos de helado, realizar pedidos, administrar repartidores, sus vehículos y asignarles pedidos.
+  version: "2.0.0"
+  title: Heladería Via Apilia (Reload)
   contact:
     email: devs@heladeria-apilia.com
   license:
@@ -186,7 +186,248 @@ paths:
                 $ref: '#/components/schemas/Pago'
         '404':
           description: No se conoce un pedido con tal id
-
+  /pedidos/{pedidoId}/asignarRepartidor/{repartidorId}:
+    post:
+      description: Inicia la asignación de un repartidor a un pedido determinado.
+      parameters:
+      - $ref: '#/components/parameters/pedidoId'
+      - $ref: '#/components/parameters/repartidorId'
+      responses:
+        '202':
+          description: Los datos de la asignación han sido recibidos correctamente y serán procesados.
+        '403':
+          description: El pedido ya tiene un repartidor asignado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: El pedido ya tiene un repartidor asignado.
+                  acciones:
+                    type: object
+                    properties:
+                      verRepartidor:
+                        type: string
+                        example: GET /pedidos/{pedidoId}/repartidor
+                      quitarRepartidor:
+                        type: string
+                        example: DELETE /pedidos/{pedidoId}/repartidor/{repartidorId}
+                      reintentarAsignarRepartidor:
+                        type: string
+                        example: POST /pedidos/{pedidoId}/asignarRepartidor/{repartidorId}
+        '404':
+          description: No se encontró el pedido o el repartidor con tal id.
+  /pedidos/{pedidoId}/repartidor:
+    get:
+      description: Ver el repartidor asignado a un pedido particular
+      parameters:
+      - $ref: '#/components/parameters/pedidoId'
+      responses:
+        '200':
+          description: Este es el repartidor asignado al pedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repartidor'
+        '404':
+          description: No se encontró el pedido o el pedido aún no tiene repartidor asignado.
+  /pedidos/{pedidoId}/repartidor/{repartidorId}:
+    delete:
+      description: Deja al pedido sin repartidor asignado.
+      parameters:
+      - $ref: '#/components/parameters/pedidoId'
+      - $ref: '#/components/parameters/repartidorId'
+      responses:
+        '204':
+          description: El repartidor fue quitado del pedido
+        '404':
+          description: No se encontró el pedido o el repartidor con tal id.
+  /repartidores:
+    get:
+      description: Listar los repartidores de pedidos
+      parameters:
+      - in: query
+        name: edadMenorA
+        required: false
+        schema:
+          type: integer
+      - in: query
+        name: edadIgualA
+        required: false
+        schema:
+          type: integer
+      - in: query
+        name: edadMayorA
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Estos son los repartidores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Repartidor'
+    post:
+      description: Agregar un nuevo repartidor
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatosDelRepartidor'
+      responses:
+        '201':
+          description: El repartidor ha sido agregado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repartidor'
+  /repartidores/{repartidorId}:
+    get:
+      description: Ver un repartidor particular
+      parameters:
+      - $ref: '#/components/parameters/repartidorId'
+      responses:
+        '200':
+          description: Repartidor encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repartidor'
+        '404':
+          description: No se encontró un repartidor con tal id
+    put:
+      description: Modificar los datos de un repartidor particular
+      parameters:
+      - $ref: '#/components/parameters/repartidorId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatosDelRepartidor'
+      responses:
+        '200':
+          description: Los datos repartidor han sido actualizados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Repartidor'
+        '404':
+          description: No se encontró un repartidor con tal id
+    delete:
+      description: Quitar a un repartidor
+      parameters:
+      - $ref: '#/components/parameters/repartidorId'
+      responses:
+        '204':
+          description: El repartidor fue eliminado
+        '404':
+          description: No se encontró un repartidor con tal id
+  /repartidores/{repartidorId}/vehiculos:
+    get:
+      description: Listar los vehículos de un repartidor
+      parameters:
+      - $ref: '#/components/parameters/repartidorId'
+      - in: query
+        name: tipo
+        required: false
+        schema:
+          $ref: '#/components/schemas/TipoDeVehiculo'
+      responses:
+        '200':
+          description: Estos son los vehículos del repartidor
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  oneOf:
+                    - $ref: '#/components/schemas/Automovil'
+                    - $ref: '#/components/schemas/Bicicleta'
+                    - $ref: '#/components/schemas/Motocicleta'
+        '404':
+          description: No se encontró un repartidor con tal id
+    post:
+      description: Agregar un vehículo al repartidor
+      parameters:
+      - $ref: '#/components/parameters/repartidorId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/Automovil'
+                - $ref: '#/components/schemas/Bicicleta'
+                - $ref: '#/components/schemas/Motocicleta'
+      responses:
+        '201':
+          description: El vehículo ha sido agregado al repartidor
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Automovil'
+                  - $ref: '#/components/schemas/Bicicleta'
+                  - $ref: '#/components/schemas/Motocicleta'
+        '404':
+          description: No se encontró un repartidor con tal id
+  /repartidores/{repartidorId}/vehiculos/{vehiculoId}:
+    get:
+      description: Ver un vehículo particular de un repartidor
+      parameters:
+      - $ref: '#/components/parameters/repartidorId'
+      - $ref: '#/components/parameters/vehiculoId'
+      responses:
+        '200':
+          description: Vehículo encontrado
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Automovil'
+                  - $ref: '#/components/schemas/Bicicleta'
+                  - $ref: '#/components/schemas/Motocicleta'
+        '404':
+          description: No se encontró un repartidor y/o vehículo con tal id
+    put:
+      description: Modificar los datos de un vehículo particular de un repartidor
+      parameters:
+      - $ref: '#/components/parameters/repartidorId'
+      - $ref: '#/components/parameters/vehiculoId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/Automovil'
+                - $ref: '#/components/schemas/Bicicleta'
+                - $ref: '#/components/schemas/Motocicleta'
+      responses:
+        '200':
+          description: Los datos del vehículo han sido actualizados
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Automovil'
+                  - $ref: '#/components/schemas/Bicicleta'
+                  - $ref: '#/components/schemas/Motocicleta'
+        '404':
+          description: No se encontró un repartidor y/o vehículo con tal id
+    delete:
+      description: Quitar un vehículo de un repartidor
+      parameters:
+      - $ref: '#/components/parameters/repartidorId'
+      - $ref: '#/components/parameters/vehiculoId'
+      responses:
+        '204':
+          description: El vehículo fue quitado del repartidor
+        '404':
+          description: No se encontró un repartidor y/o vehículo con tal id
 components:
   parameters:
     gustoId:
@@ -207,6 +448,20 @@ components:
       name: poteId
       in: path
       description: id del pote
+      required: true
+      schema:
+        type: integer
+    repartidorId:
+      name: repartidorId
+      in: path
+      description: id del repartidor
+      required: true
+      schema:
+        type: integer
+    vehiculoId:
+      name: vehiculoId
+      in: path
+      description: id del vehículo
       required: true
       schema:
         type: integer
@@ -332,5 +587,101 @@ components:
             - pago fallado
           example: pago aceptado
       required: [status]
-            
-  
+    DatosDelRepartidor:
+      description: datos de un repartidor de pedidos
+      type: object
+      properties:
+        nombre:
+          type: string
+          description: nombre del repartidor
+          example: Claudio
+        apellido:
+          type: string
+          description: apellido del repartidor
+          example: Righetti
+        cuil:
+          type: integer
+          description: codigo de identificación tributaria del repartidor
+          example: 20333444449
+        fecha_nacimiento:
+          type: integer
+          description: fecha de nacimiento del repartidor, en formato YYYY-MM-DD
+          example: 1969-12-31
+      required: [nombre, apellido, cuil, fecha_nacimiento]
+    Repartidor:
+      description: un repartidor de pedidos
+      type: object
+      properties:
+        id:
+          type: integer
+          description: identificador de este repartidor
+          example: 22
+        nombre:
+          type: string
+          description: nombre del repartidor
+          example: Claudio
+        apellido:
+          type: string
+          description: apellido del repartidor
+          example: Righetti
+        cuil:
+          type: integer
+          description: codigo de identificación tributaria del repartidor
+          example: 20333444449
+        edad:
+            type: integer
+            description: edad del repartidor
+            example: 65
+      required: [id, nombre, apellido, cuil, edad]
+    TipoDeVehiculo:
+      description: categoría de vechículos de reparto
+      type: string
+      enum:
+        - auto
+        - bici
+        - moto
+      example: moto
+    Vehiculo:
+      description: un vehículo de un repartidor
+      type: object
+      properties:
+        id:
+          type: integer
+          description: identificador de este vehículo
+          example: 1
+        tipo:
+          $ref: '#/components/schemas/TipoDeVehiculo'
+      required: [id, tipo]
+    Automovil:
+      description: un auto de reparto
+      allOf:
+      - $ref: '#/components/schemas/Vehiculo'
+      - type: object
+        properties:
+          patente:
+            type: string
+            description: patente del auto
+            example: AG-450-AA, otro ejemplo ABC123
+        required: [patente]
+    Bicicleta:
+      description: una bicileta
+      allOf:
+      - $ref: '#/components/schemas/Vehiculo'
+      - type: object
+        properties:
+          rodado:
+            type: string
+            description: rodado de la bicicleta
+            example: rodado 29
+        required: [rodado]
+    Motocicleta:
+      description: una moto
+      allOf:
+      - $ref: '#/components/schemas/Vehiculo'
+      - type: object
+        properties:
+          patente:
+            type: string
+            description: patente de la motocicleta
+            example: A12-3BCD
+        required: [patente]
